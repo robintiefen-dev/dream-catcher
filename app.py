@@ -16,6 +16,7 @@ def render_page_details_table(result) -> None:
                 "Has selectable text": "Yes" if detail.has_selectable_text else "No",
                 "Has images": "Yes" if detail.has_images else "No",
                 "Heading-like lines": detail.heading_like_lines,
+                "OCR suggestion": detail.ocr_suggestion,
             }
         )
 

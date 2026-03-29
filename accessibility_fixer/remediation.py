@@ -36,6 +36,15 @@ def _build_notes_text(result: AnalysisResult) -> str:
     lines.extend(
         [
             "",
+            "OCR suggestions by page:",
+        ]
+    )
+    for detail in result.page_details:
+        lines.append(f"- Page {detail.page_number}: {detail.ocr_suggestion}")
+
+    lines.extend(
+        [
+            "",
             "Important:",
             "This is not full PDF/UA remediation.",
             "Manual tagging, reading order, and verified alt text are still needed.",

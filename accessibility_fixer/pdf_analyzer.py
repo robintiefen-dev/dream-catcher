@@ -24,6 +24,7 @@ class PageDetail:
     has_selectable_text: bool
     has_images: bool
     heading_like_lines: int
+    ocr_suggestion: str
 
 
 @dataclass
@@ -62,6 +63,15 @@ def _count_heading_like_lines(page_text: str) -> int:
         if len(clean_line) < 70 and any(word in clean_line for word in HEADING_KEYWORDS):
             count += 1
     return count
+
+
+def _build_ocr_suggestion(has_text: bool, has_images: bool) -> str:
+    """Return a short OCR recommendation for one page."""
+    if has_text:
+        return "No OCR needed (selectable text found)."
+    if has_images:
+        return "Run OCR on this page and verify reading order + text accuracy."
+    return "No text detected. Check if this page is blank/decorative or run OCR if needed."
 
 
 def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
@@ -107,6 +117,7 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
                 has_selectable_text=has_text,
                 has_images=has_images,
                 heading_like_lines=heading_like_lines,
+                ocr_suggestion=_build_ocr_suggestion(has_text=has_text, has_images=has_images),
             )
         )
 
@@ -131,6 +142,17 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
                 explanation=(
                     f"{pages_without_text} page(s) may be scanned images or contain text "
                     "that assistive technology cannot easily read."
+                ),
+            )
+        )
+
+    if pages_without_text > 0:
+        issues.append(
+            Issue(
+                title="OCR recommended",
+                explanation=(
+                    "At least one page has no selectable text. "
+                    "Run OCR on those pages and verify reading order and accuracy."
                 ),
             )
         )

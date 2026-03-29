@@ -13,6 +13,7 @@ A beginner-friendly Streamlit app that analyzes a PDF and reports common accessi
   - likely missing heading structure
   - basic readability/structure warning for long PDFs
 - Page-by-page signals table to make review easier
+- OCR suggestions per page for fast triage
 
 ## New in this iteration: Remediated draft output
 
@@ -71,19 +72,18 @@ Then open the local URL shown in your terminal (usually `http://localhost:8501`)
    - Summary status
    - Page/text/image metrics
    - Plain-English issue explanations
-   - Page-by-page details table
+   - Page-by-page details table (includes OCR suggestion per page)
 4. Click **Download remediated draft** to export a new PDF copy.
 
 ## Beginner notes
 
 - `app.py` handles the user interface.
 - `accessibility_fixer/pdf_analyzer.py` contains the PDF analysis logic.
-- `accessibility_fixer/remediation.py` builds a downloadable remediated draft file.
+- `accessibility_fixer/remediation.py` builds a downloadable remediated draft file with OCR guidance notes.
 - The analysis intentionally uses simple rules so it's easy to learn and extend.
 
 ## Next feature ideas
 
-- OCR suggestions per page
 - Better heading detection using font size/style signals
 - Export report as JSON or CSV
 - Track repeated decorative images/logos
