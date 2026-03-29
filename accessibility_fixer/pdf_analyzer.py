@@ -48,6 +48,8 @@ class AnalysisResult:
     has_bookmarks: bool
     heading_levels_detected: int
     heading_hierarchy_jumps: int
+    has_language_metadata: bool
+    metadata_language: str
     page_details: List[PageDetail] = field(default_factory=list)
     issues: List[Issue] = field(default_factory=list)
 
@@ -207,6 +209,10 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
     bookmark_count = len(toc)
     has_bookmarks = bookmark_count > 0
 
+    metadata = document.metadata or {}
+    metadata_language = str(metadata.get("language", "") or "").strip()
+    has_language_metadata = bool(metadata_language)
+
     page_summaries: list[dict] = []
     image_occurrence_counts: dict[str, int] = {}
     document_heading_sizes: list[float] = []
@@ -327,6 +333,9 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
     elif bookmark_count > 0 and page_count >= 8 and bookmark_count < 3:
         issues.append(Issue("Limited bookmark navigation", f"Only {bookmark_count} bookmark(s) were found. Consider adding more bookmarks for major sections to improve navigation."))
 
+    if not has_language_metadata:
+        issues.append(Issue("Missing document language metadata", "No document language metadata was detected. Set a default document language (for example en-US) so assistive technology can pronounce text correctly."))
+
     if page_count > 15:
         issues.append(Issue("Long document readability warning", "Long PDFs are harder to navigate without strong structure. Consider adding clear headings, bookmarks, and short sections."))
 
@@ -350,6 +359,8 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
         has_bookmarks=has_bookmarks,
         heading_levels_detected=heading_levels_detected,
         heading_hierarchy_jumps=heading_hierarchy_jumps,
+        has_language_metadata=has_language_metadata,
+        metadata_language=metadata_language,
         page_details=page_details,
         issues=issues,
     )

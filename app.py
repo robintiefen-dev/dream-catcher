@@ -72,7 +72,7 @@ if result and pdf_bytes:
     top5.metric("Pages with tables", result.pages_with_tables)
     top6.metric("Pages with form fields", result.pages_with_form_fields)
 
-    bottom1, bottom2, bottom3, bottom4, bottom5, bottom6, bottom7 = st.columns(7)
+    bottom1, bottom2, bottom3, bottom4, bottom5, bottom6, bottom7, bottom8 = st.columns(8)
     bottom1.metric("Likely alt-text risk pages", result.likely_missing_alt_text_pages)
     bottom2.metric("Pages with repeated images", result.pages_with_repeated_images)
     bottom3.metric("Bookmarks", result.bookmark_count)
@@ -80,6 +80,10 @@ if result and pdf_bytes:
     bottom5.metric("Heading jumps", result.heading_hierarchy_jumps)
     bottom6.metric("Table header warnings", result.table_header_warning_count)
     bottom7.metric("Unlabeled form fields", result.unlabeled_form_field_count)
+    bottom8.metric("Language metadata", "Yes" if result.has_language_metadata else "No")
+
+    if result.has_language_metadata:
+        st.caption(f"Detected document language metadata: {result.metadata_language}")
 
     st.subheader("Accessibility issues found")
     if not result.issues:

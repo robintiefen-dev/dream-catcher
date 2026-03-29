@@ -15,6 +15,7 @@ A beginner-friendly Streamlit app that analyzes a PDF and reports common accessi
   - basic readability/structure warning for long PDFs
   - table extraction checks (table presence + possible missing headers)
   - form-field checks (presence + possible missing labels)
+  - language metadata checks (default document language present/missing)
 - Page-by-page signals table to make review easier
 - OCR suggestions per page for fast triage
 - Downloadable analysis report export (JSON and CSV)
@@ -80,7 +81,7 @@ Then open the local URL shown in your terminal (usually `http://localhost:8501`)
 2. Click **Analyze PDF**.
 3. Review:
    - Summary status
-   - Page/text/image/table/form/bookmark/heading metrics
+   - Page/text/image/table/form/bookmark/heading/language metrics
    - Plain-English issue explanations
    - Page-by-page details table (includes table count, form field count, OCR suggestion, and repeated image hits per page)
 4. Download analysis reports:
@@ -102,4 +103,4 @@ Then open the local URL shown in your terminal (usually `http://localhost:8501`)
 
 ## Next feature ideas
 
-- Add language metadata checks
+- Add color contrast hints for extracted text styles
