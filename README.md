@@ -16,6 +16,7 @@ A beginner-friendly Streamlit app that analyzes a PDF and reports common accessi
 - OCR suggestions per page for fast triage
 - Downloadable analysis report export (JSON and CSV)
 - Repeated decorative image/logo tracking across pages
+- Bookmark/navigation suggestions based on detected document outline
 
 ## New in this iteration: Remediated draft output
 
@@ -76,7 +77,7 @@ Then open the local URL shown in your terminal (usually `http://localhost:8501`)
 2. Click **Analyze PDF**.
 3. Review:
    - Summary status
-   - Page/text/image metrics
+   - Page/text/image/bookmark metrics
    - Plain-English issue explanations
    - Page-by-page details table (includes OCR suggestion + repeated image hits per page)
 4. Download analysis reports:
@@ -98,5 +99,4 @@ Then open the local URL shown in your terminal (usually `http://localhost:8501`)
 
 ## Next feature ideas
 
-
-- Add bookmark/navigation suggestions
+- Add heading hierarchy depth checks

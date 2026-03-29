@@ -41,6 +41,8 @@ class AnalysisResult:
     likely_missing_alt_text_pages: int
     repeated_image_groups: int
     pages_with_repeated_images: int
+    bookmark_count: int
+    has_bookmarks: bool
     page_details: List[PageDetail] = field(default_factory=list)
     issues: List[Issue] = field(default_factory=list)
 
@@ -147,6 +149,10 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
     pages_with_images = 0
     total_heading_signals = 0
     likely_missing_alt_text_pages = 0
+
+    toc = document.get_toc(simple=True)
+    bookmark_count = len(toc)
+    has_bookmarks = bookmark_count > 0
 
     # Temporary data so we can calculate repeated-image signals after scanning all pages.
     page_summaries: list[dict] = []
@@ -284,6 +290,27 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
             )
         )
 
+    if page_count >= 8 and not has_bookmarks:
+        issues.append(
+            Issue(
+                title="Missing bookmark navigation",
+                explanation=(
+                    "This document has enough pages that bookmarks would help navigation. "
+                    "Consider adding bookmarks that match major section headings."
+                ),
+            )
+        )
+    elif bookmark_count > 0 and page_count >= 8 and bookmark_count < 3:
+        issues.append(
+            Issue(
+                title="Limited bookmark navigation",
+                explanation=(
+                    f"Only {bookmark_count} bookmark(s) were found. "
+                    "Consider adding more bookmarks for major sections to improve navigation."
+                ),
+            )
+        )
+
     if page_count > 15:
         issues.append(
             Issue(
@@ -305,6 +332,8 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
         likely_missing_alt_text_pages=likely_missing_alt_text_pages,
         repeated_image_groups=len(repeated_hashes),
         pages_with_repeated_images=pages_with_repeated_images,
+        bookmark_count=bookmark_count,
+        has_bookmarks=has_bookmarks,
         page_details=page_details,
         issues=issues,
     )

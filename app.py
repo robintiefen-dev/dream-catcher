@@ -61,13 +61,16 @@ if result and pdf_bytes:
     st.subheader("Summary")
     st.write(f"**Status:** {result.summary_status}")
 
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
-    col1.metric("Pages", result.page_count)
-    col2.metric("Pages with text", result.pages_with_text)
-    col3.metric("Pages without text", result.pages_without_text)
-    col4.metric("Pages with images", result.pages_with_images)
-    col5.metric("Likely alt-text risk pages", result.likely_missing_alt_text_pages)
-    col6.metric("Pages with repeated images", result.pages_with_repeated_images)
+    top1, top2, top3, top4 = st.columns(4)
+    top1.metric("Pages", result.page_count)
+    top2.metric("Pages with text", result.pages_with_text)
+    top3.metric("Pages without text", result.pages_without_text)
+    top4.metric("Pages with images", result.pages_with_images)
+
+    bottom1, bottom2, bottom3 = st.columns(3)
+    bottom1.metric("Likely alt-text risk pages", result.likely_missing_alt_text_pages)
+    bottom2.metric("Pages with repeated images", result.pages_with_repeated_images)
+    bottom3.metric("Bookmarks", result.bookmark_count)
 
     st.subheader("Accessibility issues found")
     if not result.issues:
