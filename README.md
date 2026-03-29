@@ -14,6 +14,7 @@ A beginner-friendly Streamlit app that analyzes a PDF and reports common accessi
   - heading hierarchy depth checks (detecting heading level jumps)
   - basic readability/structure warning for long PDFs
   - table extraction checks (table presence + possible missing headers)
+  - form-field checks (presence + possible missing labels)
 - Page-by-page signals table to make review easier
 - OCR suggestions per page for fast triage
 - Downloadable analysis report export (JSON and CSV)
@@ -79,9 +80,9 @@ Then open the local URL shown in your terminal (usually `http://localhost:8501`)
 2. Click **Analyze PDF**.
 3. Review:
    - Summary status
-   - Page/text/image/table/bookmark/heading metrics
+   - Page/text/image/table/form/bookmark/heading metrics
    - Plain-English issue explanations
-   - Page-by-page details table (includes table count, OCR suggestion, and repeated image hits per page)
+   - Page-by-page details table (includes table count, form field count, OCR suggestion, and repeated image hits per page)
 4. Download analysis reports:
    - **JSON report** (full analysis payload)
    - **CSV page report** (page-by-page table)
@@ -101,4 +102,4 @@ Then open the local URL shown in your terminal (usually `http://localhost:8501`)
 
 ## Next feature ideas
 
-- Add form-field accessibility checks
+- Add language metadata checks

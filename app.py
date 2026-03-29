@@ -19,6 +19,7 @@ def render_page_details_table(result) -> None:
                 "Has images": "Yes" if detail.has_images else "No",
                 "Has tables": "Yes" if detail.has_tables else "No",
                 "Table count": detail.table_count,
+                "Form fields": detail.form_field_count,
                 "Heading signals": detail.heading_signal_count,
                 "OCR suggestion": detail.ocr_suggestion,
                 "Repeated image hits": detail.repeated_image_hits,
@@ -63,20 +64,22 @@ if result and pdf_bytes:
     st.subheader("Summary")
     st.write(f"**Status:** {result.summary_status}")
 
-    top1, top2, top3, top4, top5 = st.columns(5)
+    top1, top2, top3, top4, top5, top6 = st.columns(6)
     top1.metric("Pages", result.page_count)
     top2.metric("Pages with text", result.pages_with_text)
     top3.metric("Pages without text", result.pages_without_text)
     top4.metric("Pages with images", result.pages_with_images)
     top5.metric("Pages with tables", result.pages_with_tables)
+    top6.metric("Pages with form fields", result.pages_with_form_fields)
 
-    bottom1, bottom2, bottom3, bottom4, bottom5, bottom6 = st.columns(6)
+    bottom1, bottom2, bottom3, bottom4, bottom5, bottom6, bottom7 = st.columns(7)
     bottom1.metric("Likely alt-text risk pages", result.likely_missing_alt_text_pages)
     bottom2.metric("Pages with repeated images", result.pages_with_repeated_images)
     bottom3.metric("Bookmarks", result.bookmark_count)
     bottom4.metric("Heading levels", result.heading_levels_detected)
     bottom5.metric("Heading jumps", result.heading_hierarchy_jumps)
     bottom6.metric("Table header warnings", result.table_header_warning_count)
+    bottom7.metric("Unlabeled form fields", result.unlabeled_form_field_count)
 
     st.subheader("Accessibility issues found")
     if not result.issues:

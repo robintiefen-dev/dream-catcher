@@ -12,21 +12,18 @@ import fitz  # PyMuPDF
 
 @dataclass
 class Issue:
-    """Represents one accessibility warning in plain English."""
-
     title: str
     explanation: str
 
 
 @dataclass
 class PageDetail:
-    """Represents simple accessibility signals for one page."""
-
     page_number: int
     has_selectable_text: bool
     has_images: bool
     has_tables: bool
     table_count: int
+    form_field_count: int
     heading_signal_count: int
     ocr_suggestion: str
     repeated_image_hits: int
@@ -34,8 +31,6 @@ class PageDetail:
 
 @dataclass
 class AnalysisResult:
-    """Stores all analysis results for a PDF."""
-
     page_count: int
     pages_with_text: int
     pages_without_text: int
@@ -43,6 +38,9 @@ class AnalysisResult:
     pages_with_tables: int
     total_tables: int
     table_header_warning_count: int
+    pages_with_form_fields: int
+    total_form_fields: int
+    unlabeled_form_field_count: int
     likely_missing_alt_text_pages: int
     repeated_image_groups: int
     pages_with_repeated_images: int
@@ -55,7 +53,6 @@ class AnalysisResult:
 
     @property
     def summary_status(self) -> str:
-        """Return a simple status string based on number of issues."""
         if not self.issues:
             return "Looks good (basic checks only)"
         if len(self.issues) <= 2:
@@ -66,7 +63,6 @@ class AnalysisResult:
 def _extract_text_spans(page: fitz.Page) -> list[dict]:
     spans: list[dict] = []
     page_dict = page.get_text("dict")
-
     for block in page_dict.get("blocks", []):
         if block.get("type") != 0:
             continue
@@ -75,7 +71,6 @@ def _extract_text_spans(page: fitz.Page) -> list[dict]:
                 text = span.get("text", "").strip()
                 if text:
                     spans.append(span)
-
     return spans
 
 
@@ -90,17 +85,12 @@ def _heading_candidate_sizes(page: fitz.Page) -> list[float]:
 
     body_size = median(sizes)
     candidates: list[float] = []
-
     for span in spans:
         text = span.get("text", "").strip()
         font_name = str(span.get("font", "")).lower()
         font_size = float(span.get("size", 0) or 0)
 
-        short_enough = len(text) <= 120
-        is_bold = "bold" in font_name
-        is_larger = font_size >= body_size * 1.2
-
-        if short_enough and (is_bold or is_larger):
+        if len(text) <= 120 and (("bold" in font_name) or font_size >= body_size * 1.2):
             candidates.append(font_size)
 
     return candidates
@@ -111,7 +101,6 @@ def _infer_heading_levels_and_jumps(heading_sizes: list[float]) -> tuple[int, in
         return 0, 0
 
     unique_sizes_desc = sorted({round(size, 1) for size in heading_sizes}, reverse=True)
-
     size_bands: list[float] = []
     for size in unique_sizes_desc:
         if not size_bands or abs(size - size_bands[-1]) > 0.7:
@@ -123,12 +112,7 @@ def _infer_heading_levels_and_jumps(heading_sizes: list[float]) -> tuple[int, in
 
     levels = [nearest_band_level(size) for size in heading_sizes]
     heading_levels_detected = len(set(levels))
-
-    hierarchy_jumps = 0
-    for previous, current in zip(levels, levels[1:]):
-        if current - previous > 1:
-            hierarchy_jumps += 1
-
+    hierarchy_jumps = sum(1 for previous, current in zip(levels, levels[1:]) if current - previous > 1)
     return heading_levels_detected, hierarchy_jumps
 
 
@@ -142,32 +126,21 @@ def _build_ocr_suggestion(has_text: bool, has_images: bool) -> str:
 
 def _image_hashes_for_page(document: fitz.Document, page: fitz.Page) -> list[str]:
     hashes: list[str] = []
-
     for image_info in page.get_images(full=True):
         xref = image_info[0]
         try:
             image_data = document.extract_image(xref)
         except Exception:
             continue
-
         raw_bytes = image_data.get("image")
-        if not raw_bytes:
-            continue
-
-        hashes.append(hashlib.sha1(raw_bytes).hexdigest())
-
+        if raw_bytes:
+            hashes.append(hashlib.sha1(raw_bytes).hexdigest())
     return hashes
 
 
 def _detect_tables(page: fitz.Page) -> tuple[int, int]:
-    """Return (table_count, header_warning_count) for a page.
-
-    Header warning heuristic:
-    - first row exists but has mostly empty cells (likely missing clear headers)
-    """
     if not hasattr(page, "find_tables"):
         return 0, 0
-
     try:
         tables_result = page.find_tables()
     except Exception:
@@ -182,19 +155,34 @@ def _detect_tables(page: fitz.Page) -> tuple[int, int]:
             rows = table.extract()
         except Exception:
             continue
-
         if not rows:
             continue
-
         first_row = rows[0]
         if not first_row:
             continue
-
         empty_cells = sum(1 for cell in first_row if not str(cell or "").strip())
         if empty_cells >= max(1, len(first_row) // 2):
             header_warning_count += 1
 
     return table_count, header_warning_count
+
+
+def _detect_form_fields(page: fitz.Page) -> tuple[int, int]:
+    """Return (form_field_count, unlabeled_form_field_count) for a page."""
+    try:
+        widgets = list(page.widgets() or [])
+    except Exception:
+        return 0, 0
+
+    total_fields = len(widgets)
+    unlabeled = 0
+    for widget in widgets:
+        field_name = str(getattr(widget, "field_name", "") or "").strip()
+        field_label = str(getattr(widget, "field_label", "") or "").strip()
+        if not field_name and not field_label:
+            unlabeled += 1
+
+    return total_fields, unlabeled
 
 
 def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
@@ -209,6 +197,9 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
     pages_with_tables = 0
     total_tables = 0
     table_header_warning_count = 0
+    pages_with_form_fields = 0
+    total_form_fields = 0
+    unlabeled_form_field_count = 0
     total_heading_signals = 0
     likely_missing_alt_text_pages = 0
 
@@ -243,6 +234,12 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
         total_tables += table_count
         table_header_warning_count += header_warnings
 
+        form_field_count, unlabeled_fields = _detect_form_fields(page)
+        if form_field_count > 0:
+            pages_with_form_fields += 1
+        total_form_fields += form_field_count
+        unlabeled_form_field_count += unlabeled_fields
+
         if has_images and not has_text:
             likely_missing_alt_text_pages += 1
 
@@ -256,6 +253,7 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
                 "has_images": has_images,
                 "has_tables": has_tables,
                 "table_count": table_count,
+                "form_field_count": form_field_count,
                 "heading_signal_count": heading_signal_count,
                 "ocr_suggestion": _build_ocr_suggestion(has_text=has_text, has_images=has_images),
                 "image_hashes": image_hashes,
@@ -279,6 +277,7 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
                 has_images=summary["has_images"],
                 has_tables=summary["has_tables"],
                 table_count=summary["table_count"],
+                form_field_count=summary["form_field_count"],
                 heading_signal_count=summary["heading_signal_count"],
                 ocr_suggestion=summary["ocr_suggestion"],
                 repeated_image_hits=repeated_hits,
@@ -308,6 +307,12 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
     if table_header_warning_count > 0:
         issues.append(Issue("Possible missing table headers", f"{table_header_warning_count} table(s) may have weak/missing header rows based on empty top-row cells."))
 
+    if total_form_fields > 0:
+        issues.append(Issue("Form fields detected", f"Detected {total_form_fields} form field(s) across {pages_with_form_fields} page(s). Ensure each field has a clear accessible label and tab order."))
+
+    if unlabeled_form_field_count > 0:
+        issues.append(Issue("Possible unlabeled form fields", f"{unlabeled_form_field_count} form field(s) may be missing accessible labels (field name/label not found)."))
+
     if len(repeated_hashes) > 0:
         issues.append(Issue("Repeated images/logos detected", f"Detected {len(repeated_hashes)} repeated image pattern(s) across {pages_with_repeated_images} page(s). These may be decorative logos or icons."))
 
@@ -335,6 +340,9 @@ def analyze_pdf(pdf_bytes: bytes) -> AnalysisResult:
         pages_with_tables=pages_with_tables,
         total_tables=total_tables,
         table_header_warning_count=table_header_warning_count,
+        pages_with_form_fields=pages_with_form_fields,
+        total_form_fields=total_form_fields,
+        unlabeled_form_field_count=unlabeled_form_field_count,
         likely_missing_alt_text_pages=likely_missing_alt_text_pages,
         repeated_image_groups=len(repeated_hashes),
         pages_with_repeated_images=pages_with_repeated_images,
